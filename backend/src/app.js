@@ -9,6 +9,7 @@ const checkinRoutes = require('./routes/checkin');
 const attendanceRoutes = require('./routes/attendance');
 const locationRoutes = require('./routes/locations');
 const employeeRoutes = require('./routes/employees');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/checkin', checkinRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
 

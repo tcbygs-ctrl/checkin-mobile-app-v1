@@ -14,7 +14,7 @@ router.post('/login', async (req, res) => {
 
   const { data: emp, error } = await supabase
     .from('employees')
-    .select('id, employee_id, full_name, is_active, face_registered, department_id')
+    .select('id, employee_id, full_name, is_active, face_registered, department_id, role')
     .eq('employee_id', employee_id)
     .single();
 
@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
     return res.status(403).json({ error: 'บัญชีนี้ถูกระงับการใช้งาน' });
 
   const token = jwt.sign(
-    { id: emp.id, employee_id: emp.employee_id, full_name: emp.full_name },
+    { id: emp.id, employee_id: emp.employee_id, full_name: emp.full_name, role: emp.role },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -37,6 +37,7 @@ router.post('/login', async (req, res) => {
       employee_id: emp.employee_id,
       full_name: emp.full_name,
       face_registered: emp.face_registered,
+      role: emp.role,
     },
   });
 });
