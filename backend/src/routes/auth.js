@@ -4,29 +4,30 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../supabase');
 
 // POST /api/auth/login
-// Body: { employee_id: "03570806", password: "..." }
+// Body: { employee_id: "03570806" }
+// ไม่ต้องใช้ password — face scan เป็น auth หลัก
 router.post('/login', async (req, res) => {
-  const { employee_id, password } = req.body;
+  const { employee_id } = req.body;
 
-  if (!employee_id || !password)
-    return res.status(400).json({ error: 'employee_id and password required' });
+  if (!employee_id || !/^\d+$/.test(employee_id))
+    return res.status(400).json({ error: 'กรุณากรอกรหัสพนักงาน (ตัวเลขเท่านั้น)' });
 
   const { data: emp, error } = await supabase
     .from('employees')
-    .select('id, employee_id, full_name, password_hash, is_active, face_registered, department_id')
+    .select('id, employee_id, full_name, is_active, face_registered, department_id')
     .eq('employee_id', employee_id)
     .single();
 
-  if (error || !emp) return res.status(401).json({ error: 'Invalid credentials' });
-  if (!emp.is_active) return res.status(403).json({ error: 'Account disabled' });
+  if (error || !emp)
+    return res.status(401).json({ error: 'ไม่พบรหัสพนักงานในระบบ' });
 
-  const valid = await bcrypt.compare(password, emp.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!emp.is_active)
+    return res.status(403).json({ error: 'บัญชีนี้ถูกระงับการใช้งาน' });
 
   const token = jwt.sign(
     { id: emp.id, employee_id: emp.employee_id, full_name: emp.full_name },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+    { expiresIn: '7d' }
   );
 
   res.json({
@@ -40,26 +41,15 @@ router.post('/login', async (req, res) => {
   });
 });
 
-// POST /api/auth/change-password
+// POST /api/auth/change-password (ใช้สำหรับ admin ตั้งค่า)
 router.post('/change-password', require('../middleware/auth'), async (req, res) => {
-  const { old_password, new_password } = req.body;
-  if (!old_password || !new_password)
-    return res.status(400).json({ error: 'old_password and new_password required' });
-  if (new_password.length < 6)
+  const { new_password } = req.body;
+  if (!new_password || new_password.length < 6)
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
-
-  const { data: emp } = await supabase
-    .from('employees')
-    .select('password_hash')
-    .eq('id', req.user.id)
-    .single();
-
-  const valid = await bcrypt.compare(old_password, emp.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Old password incorrect' });
 
   const hash = await bcrypt.hash(new_password, 10);
   await supabase.from('employees').update({ password_hash: hash }).eq('id', req.user.id);
-  res.json({ message: 'Password changed successfully' });
+  res.json({ message: 'Password updated successfully' });
 });
 
 module.exports = router;
