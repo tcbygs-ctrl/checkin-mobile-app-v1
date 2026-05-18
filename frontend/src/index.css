@@ -12,7 +12,7 @@
   --radius: 12px;
 }
 
-body { background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
 .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
 
@@ -83,6 +83,10 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; }
 
 /* Status pill */
 .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+/* Spin animation for Loader2 icon */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
 
 /* Page spacing */
 .page { padding: 72px 16px 90px; max-width: 480px; margin: 0 auto; }

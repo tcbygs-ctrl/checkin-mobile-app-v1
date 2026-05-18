@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Fingerprint, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
@@ -9,19 +10,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ถ้ามี token ที่ยังไม่หมดอายุ → ข้ามหน้า login
   useEffect(() => {
     const token = localStorage.getItem('token');
     const expiry = localStorage.getItem('token_expiry');
-    if (token && expiry && Date.now() < parseInt(expiry)) {
-      navigate('/');
-    }
+    if (token && expiry && Date.now() < parseInt(expiry)) navigate('/');
   }, []);
 
   const handleInput = (e) => {
-    // รับเฉพาะตัวเลข
-    const val = e.target.value.replace(/\D/g, '');
-    setEmployeeId(val);
+    setEmployeeId(e.target.value.replace(/\D/g, ''));
     setError('');
   };
 
@@ -32,9 +28,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(employeeId);
-      // บันทึก expiry 7 วัน
-      const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
-      localStorage.setItem('token_expiry', expiry.toString());
+      localStorage.setItem('token_expiry', (Date.now() + 7 * 24 * 60 * 60 * 1000).toString());
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.error || 'รหัสพนักงานไม่ถูกต้อง');
@@ -52,19 +46,19 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{
-            width: 80, height: 80, borderRadius: '50%',
+            width: 88, height: 88, borderRadius: '50%',
             background: 'var(--primary)', display: 'inline-flex',
             alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-            boxShadow: '0 4px 20px rgba(37,99,235,0.3)'
+            boxShadow: '0 4px 24px rgba(37,99,235,0.25)'
           }}>
-            <span style={{ fontSize: 40 }}>👤</span>
+            <Fingerprint size={44} color="#fff" strokeWidth={1.5} />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>ระบบลงเวลาทำงาน</h1>
           <p style={{ color: 'var(--muted)', marginTop: 4, fontSize: 14 }}>Check-in / Check-out System</p>
         </div>
 
         <div className="card" style={{ padding: 28 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20, textAlign: 'center', color: 'var(--muted)' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, textAlign: 'center', color: 'var(--muted)' }}>
             กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ
           </h2>
 
@@ -72,10 +66,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 24 }}>
-              <label style={{
-                display: 'block', fontSize: 13, fontWeight: 600,
-                marginBottom: 8, color: 'var(--muted)'
-              }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--muted)' }}>
                 รหัสพนักงาน
               </label>
               <input
@@ -89,7 +80,7 @@ export default function LoginPage() {
                 maxLength={20}
                 required
                 autoFocus
-                style={{ fontSize: 24, textAlign: 'center', letterSpacing: 4, fontWeight: 700 }}
+                style={{ fontSize: 26, textAlign: 'center', letterSpacing: 6, fontWeight: 700 }}
               />
               <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
                 กรอกตัวเลขเท่านั้น
@@ -100,8 +91,9 @@ export default function LoginPage() {
               className="btn btn-primary"
               type="submit"
               disabled={loading || employeeId.length === 0}
-              style={{ fontSize: 16, padding: '14px' }}
+              style={{ fontSize: 16, padding: '14px', gap: 10 }}
             >
+              <LogIn size={18} />
               {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
           </form>
