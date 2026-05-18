@@ -1,0 +1,162 @@
+import { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
+import { th } from 'date-fns/locale';
+import api from '../services/api';
+import NavBar from '../components/NavBar';
+
+const STATUS_MAP = {
+  present: { label: 'มาทำงาน', cls: 'badge-green' },
+  late:    { label: 'มาสาย',   cls: 'badge-yellow' },
+  absent:  { label: 'ขาดงาน',  cls: 'badge-red' },
+};
+
+export default function HistoryPage() {
+  const [records, setRecords] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [tab, setTab] = useState('list'); // list | summary
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/attendance/history?days=60&page=${page}&limit=20`)
+      .then((r) => {
+        setRecords(r.data.data);
+        setPagination(r.data.pagination);
+      })
+      .finally(() => setLoading(false));
+  }, [page]);
+
+  useEffect(() => {
+    if (tab === 'summary') {
+      api.get(`/attendance/summary?month=${month}`).then((r) => setSummary(r.data));
+    }
+  }, [tab, month]);
+
+  const fmt = (iso) => iso ? format(parseISO(iso), 'HH:mm') : '--:--';
+  const fmtDate = (d) => format(parseISO(d), 'd MMM', { locale: th });
+
+  return (
+    <div className="page">
+      <h1 className="page-title">ประวัติการทำงาน</h1>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {['list', 'summary'].map((t) => (
+          <button
+            key={t}
+            className={`btn ${tab === t ? 'btn-primary' : 'btn-outline'}`}
+            style={{ flex: 1, padding: '10px 0' }}
+            onClick={() => setTab(t)}
+          >
+            {t === 'list' ? '📋 รายการ 60 วัน' : '📊 สรุปรายเดือน'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'list' && (
+        <div className="card">
+          {loading ? (
+            <p style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>กำลังโหลด...</p>
+          ) : records.length === 0 ? (
+            <p style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>ไม่มีข้อมูล</p>
+          ) : (
+            records.map((r) => (
+              <div key={r.id} className="history-row">
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>{fmtDate(r.work_date)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                    {r.checkin_locations?.name || '—'}
+                  </div>
+                  {r.work_hours && (
+                    <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 2 }}>
+                      ⏱ {r.work_hours} ชม.
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span className={`badge ${STATUS_MAP[r.status]?.cls || 'badge-gray'}`}>
+                    {STATUS_MAP[r.status]?.label || r.status}
+                  </span>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, justifyContent: 'flex-end' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>เข้า</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--success)' }}>{fmt(r.checkin_at)}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>ออก</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--danger)' }}>{fmt(r.checkout_at)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Pagination */}
+          {pagination && pagination.pages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+              <button className="btn btn-outline" style={{ width: 'auto', padding: '8px 16px' }}
+                disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← ก่อนหน้า</button>
+              <span style={{ alignSelf: 'center', fontSize: 13, color: 'var(--muted)' }}>
+                {page} / {pagination.pages}
+              </span>
+              <button className="btn btn-outline" style={{ width: 'auto', padding: '8px 16px' }}
+                disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)}>ถัดไป →</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'summary' && (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <input
+              type="month"
+              className="input"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+          </div>
+          {summary && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
+                {[
+                  { label: 'วันที่ทำงาน', value: summary.summary.total_days, color: 'var(--primary)' },
+                  { label: 'มาทำงาน', value: summary.summary.present, color: 'var(--success)' },
+                  { label: 'มาสาย', value: summary.summary.late, color: 'var(--warning)' },
+                  { label: 'รวมชั่วโมง', value: `${summary.summary.total_work_hours} ชม.`, color: 'var(--text)' },
+                ].map((s) => (
+                  <div key={s.label} className="card" style={{ textAlign: 'center', marginBottom: 0 }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card">
+                {summary.records.map((r) => (
+                  <div key={r.work_date} className="history-row">
+                    <div style={{ fontWeight: 500 }}>{fmtDate(r.work_date)}</div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <span style={{ fontSize: 13 }}>
+                        {fmt(r.checkin_at)} → {fmt(r.checkout_at)}
+                      </span>
+                      <span className={`badge ${STATUS_MAP[r.status]?.cls || 'badge-gray'}`} style={{ fontSize: 11 }}>
+                        {STATUS_MAP[r.status]?.label || '-'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <NavBar />
+    </div>
+  );
+}

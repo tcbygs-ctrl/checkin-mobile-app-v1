@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.log
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# face-api model weights (ดาวน์โหลดแยก ไม่ push ขึ้น git)
+frontend/public/models/
+backend/models/
